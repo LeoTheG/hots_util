@@ -1,5 +1,4 @@
-import pandas as pd
-from pprint import pprint
+import json
 import requests
 from datetime import date
 from dateutil.relativedelta import relativedelta
@@ -11,16 +10,10 @@ correct_day = prev_month.strftime('%Y-%m-%d')
 
 response = requests.get("http://hotsapi.net/api/v1/replays/paged?page="+str(curr_page)+"&start_date="+correct_day)
 
-rj = response.json()
+#rj = response.json()
+data = json.loads(response.text)
 
-'''
-rlist = list(rj.keys())
-print(len(rlist))
-print(rlist.pop(1))
-'''
+print data['replays'][0]['id']
 
-pprint(rj)
-#df = pd.read_json(response.text, orient='columns')
+#want to find most popular heroes
 
-#print(df[['id']])
-#print(df)
