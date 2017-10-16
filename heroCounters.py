@@ -11,6 +11,8 @@ class Hero:
     name = ''
     def __init__(self,name):
         self.name = name
+        self.wins = 0.0
+        self.losses = 0.0
     def incWin(self):
         self.wins += 1
     def incLoss(self):
@@ -29,10 +31,13 @@ class Hero:
         return int(self.losses)
 class WinLoss:
     enemyHeroes = {}
+    heroName = ''
     # creates new Hero object and adds to list
+    def __init__(self, name):
+        self.enemyHeroes = {}
+        self.heroName = name
     def addHero(self, name):
-        newHero = Hero(name)
-        self.enemyHeroes[name] = newHero
+        self.enemyHeroes[name] = Hero(name)
     def incWin(self,heroName):
         if self.enemyHeroes == False:
             self.addHero(heroName)
@@ -53,77 +58,79 @@ class WinLoss:
         self.enemyHeroes[heroName].getWinPerc()
     def getHeroes(self):
         return self.enemyHeroes
+    def getHero(self,name):
+        return self.enemyHeroes[name]
 
 #calculates date 1 month ago
-curr_page = 1
 prev_month = date.today() + relativedelta(months=-1)
 correct_day = prev_month.strftime('%Y-%m-%d')
 game_type = "HeroLeague"
 
-#print "Requesting replays" #from http://hotsapi.net/api/v1/replays/paged?page="+str(curr_page)+"&start_date="+correct_day+"&game_type="+game_type
-response = requests.get("http://hotsapi.net/api/v1/replays/paged?page="+str(curr_page)+"&start_date="+correct_day+"&game_type="+game_type)
-#print "Finished requesting"
-
-data = json.loads(response.text)
-
 heroDict = {}
+for i in range(0,10):
+    curr_page = i+1
+    print "On page " + str(curr_page)
+    print "Requesting response"
+    #response = requests.get("http://hotsapi.net/api/v1/replays/paged?page="+str(curr_page)+"&start_date="+correct_day+"&game_type="+game_type)
+    response = requests.get("http://hotsapi.net/api/v1/replays/paged?page="+str(curr_page)+"&game_type="+game_type)
+    print "Finished request"
 
-lenReplays = len(data['replays'])
-
-for x in range(0,lenReplays):
-    #print "Checking replay " + str(x+1)
-    currID =  data['replays'.decode('utf-8')][x]['id']
-
-    #print("got id:"+str(currID))
-
-    # want to count hero popularity
-    response = requests.get('http://hotsapi.net/api/v1/replays/'+str(currID))
-
-    # loads data of certain replay ( got through ID )
-    replayData = json.loads(response.text)
-
-    arrLen = len(replayData['players'])
-
-    numWinners = 0
-    numLosers = 0
-    winners = [''] * 5
-    losers = [''] * 5
-
-    # iterate through heroes played in certain match, keeping count
-    for i in range (0,arrLen):
-        heroName = (replayData['players'][i]['hero']).encode("utf-8")
-
-        # sort winners & losers into 2 arrays
-        if replayData['players'][i]['winner'] == True:
-            winners[numWinners] = (replayData['players'][i]['hero']).encode("utf-8")
-            numWinners += 1
-        else:
-            losers[numLosers] = (replayData['players'][i]['hero']).encode("utf-8")
-            numLosers += 1
-
-    # adds wins and losses to heroDict
-    for win in range (0, 5):
-        winner = winners[win]
-        for lose in range (0,5):
-            loser = losers[lose]
-
-            # heroDict['Stitches'] = winLoss
-            # winLoss is WinLoss obj
+    data = json.loads(response.text)
 
 
-            # ex heroDict['Stitches']['Chromie']['win'] += 1
-            if (winner in heroDict) == False:
-                print "updating heroDict with winners key: " + winner
-                winLoss = WinLoss()
-                heroDict[winner] = winLoss
+    lenReplays = len(data['replays'])
 
-            heroDict[winner].incWin(loser)
+    for x in range(0,lenReplays):
+        #print "Checking replay " + str(x+1)
+        currID =  data['replays'.decode('utf-8')][x]['id']
 
-            if (loser in heroDict) == False:
-                winLoss = WinLoss()
-                heroDict[loser] = winLoss
+        #print("got id:"+str(currID))
 
-            heroDict[loser].incLoss(winner)
+        # want to count hero popularity
+        response = requests.get('http://hotsapi.net/api/v1/replays/'+str(currID))
+
+        # loads data of certain replay ( got through ID )
+        replayData = json.loads(response.text)
+
+        arrLen = len(replayData['players'])
+
+        numWinners = 0
+        numLosers = 0
+        winners = [''] * 5
+        losers = [''] * 5
+
+        # iterate through heroes played in certain match, keeping count
+        for i in range (0,arrLen):
+            heroName = (replayData['players'][i]['hero']).encode("utf-8")
+
+            # sort winners & losers into 2 arrays
+            if replayData['players'][i]['winner'] == True:
+                winners[numWinners] = (replayData['players'][i]['hero']).encode("utf-8")
+                numWinners += 1
+            else:
+                losers[numLosers] = (replayData['players'][i]['hero']).encode("utf-8")
+                numLosers += 1
+
+        # adds wins and losses to heroDict
+        for win in range (0, 5):
+            winner = winners[win]
+            for lose in range (0,5):
+                loser = losers[lose]
+
+                # ex heroDict['Stitches']['Chromie']['win'] += 1
+                if (winner in heroDict) == False:
+                    #winLoss = WinLoss(winner)
+                    #heroDict[winner] = winLoss
+                    heroDict[winner] = WinLoss(winner)
+
+                heroDict[winner].incWin(loser)
+
+                if (loser in heroDict) == False:
+                    #winLoss = WinLoss(loser)
+                    #heroDict[loser] = winLoss
+                    heroDict[loser] = WinLoss(loser)
+
+                heroDict[loser].incLoss(winner)
 
 lenDict = len(heroDict)
 
