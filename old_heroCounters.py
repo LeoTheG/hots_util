@@ -114,30 +114,6 @@ for i in range(0,1):
             for lose in range (0,5):
                 loser = losers[lose]
 
-                # structure: heroDict[Hero] = dict( loser, dict(wins,losses) )
-
-                # add winner key & value to heroDict if nonexistent
-                #print "key: " + winner + ", value: " + str(heroDict[winner])
-                if (winner in heroDict) == False:
-                    print "Adding winner key: " + winner
-                    heroDict[winner] = dict( [( loser, dict( [('wins',0),('losses',0)] ))] )
-                # add loser key & value to heroDict[winner] if nonexistent
-                if (loser in heroDict[winner]) == False:
-                    heroDict[winner][loser] = dict([('wins',0),('losses',0)])
-
-                # increment win
-                heroDict[winner][loser]['wins'] += 1
-
-                if (loser in heroDict) == False:
-                    heroDict[loser] = dict([(winner,dict([('wins',0),('losses',0)]))])
-                # add winner key & value to heroDict[loser] if nonexistent
-                if (winner in heroDict[loser]) == False:
-                    heroDict[loser][winner] = dict([('wins',0),('losses',0)])
-
-                # increment loss
-                heroDict[loser][winner]['losses'] += 1
-
-                '''
                 if (winner in heroDict) == False:
                     heroDict[winner] = WinLoss(winner)
 
@@ -147,7 +123,6 @@ for i in range(0,1):
                     heroDict[loser] = WinLoss(loser)
 
                 heroDict[loser].incLoss(winner)
-                '''
 
 lenDict = len(heroDict)
 
