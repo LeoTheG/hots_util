@@ -1,4 +1,5 @@
 import json
+import os
 import requests
 from datetime import date
 from dateutil.relativedelta import relativedelta
@@ -10,9 +11,16 @@ correct_day = prev_month.strftime('%Y-%m-%d')
 game_type = "HeroLeague"
 
 heroDict = {}
-numPages = 2
-for i in range(0,numPages):
-    curr_page = i+1
+beginPage = 161
+endPage = 200
+dicFileName = 'dic'
+
+for i in range(beginPage,endPage):
+    if os.stat(dicFileName).st_size:
+        with open(dicFileName) as d:
+            heroDict = json.load(d)
+            print "loaded dic"
+    curr_page = i
     print "On page " + str(curr_page)
     print "Requesting response"
     #response = requests.get("http://hotsapi.net/api/v1/replays/paged?page="+str(curr_page)+"&start_date="+correct_day+"&game_type="+game_type)
@@ -27,8 +35,9 @@ for i in range(0,numPages):
     for x in range(0,lenReplays):
         currID =  data['replays'.decode('utf-8')][x]['id']
 
-        # want to count hero popularity
+        print "\tRequesting replay id:" + str(currID)
         response = requests.get('http://hotsapi.net/api/v1/replays/'+str(currID))
+        print "\tFinished replay request"
 
         # loads data of certain replay ( got through ID )
         replayData = json.loads(response.text)
@@ -63,7 +72,6 @@ for i in range(0,numPages):
                 # add winner key & value to heroDict if nonexistent
                 #print "key: " + winner + ", value: " + str(heroDict[winner])
                 if (winner in heroDict) == False:
-                    print "Adding winner key: " + winner
                     heroDict[winner] = dict( [( loser, dict( [('wins',0),('losses',0)] ))] )
                 # add loser key & value to heroDict[winner] if nonexistent
                 if (loser in heroDict[winner]) == False:
@@ -81,8 +89,11 @@ for i in range(0,numPages):
                 # increment loss
                 heroDict[loser][winner]['losses'] += 1
 
-
-lenDict = len(heroDict)
+   # save dict every page in case of request timeout
+    with open('dic', 'w') as outfile:
+        json.dump(heroDict, outfile)
+        print "saved page: " + str(curr_page)
+        read_from_dic = True
 
 with open('stats.txt', 'w') as outfile:
     json.dump(heroDict, outfile)
