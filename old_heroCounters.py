@@ -1,147 +1,114 @@
 import json
+import os
 import requests
 from datetime import date
 from dateutil.relativedelta import relativedelta
 from  pprint import pprint
 
-# used for enemy heroes
-class Hero:
-    wins = 0.0
-    losses = 0.0
-    name = ''
-    def __init__(self,name):
-        self.name = name
-        self.wins = 0.0
-        self.losses = 0.0
-    def incWin(self):
-        self.wins += 1
-    def incLoss(self):
-        self.losses += 1
-    def getTotal(self):
-        return self.wins+self.losses
-    def getWinPerc(self):
-        return self.wins/self.getTotal()
-    def getLossPerc(self):
-        return self.losses/self.getTotal()
-    def getName(self):
-        return self.name
-    def getWins(self):
-        return int(self.wins)
-    def getLosses(self):
-        return int(self.losses)
-class WinLoss:
-    enemyHeroes = {}
-    heroName = ''
-    # creates new Hero object and adds to list
-    def __init__(self, name):
-        self.enemyHeroes = {}
-        self.heroName = name
-    def addHero(self, name):
-        self.enemyHeroes[name] = Hero(name)
-    def incWin(self,heroName):
-        if self.enemyHeroes == False:
-            self.addHero(heroName)
-        if (heroName in self.enemyHeroes) == False:
-            self.addHero(heroName)
-        self.enemyHeroes[heroName].incWin()
-    def incLoss(self,heroName):
-        if self.enemyHeroes == False:
-            self.addHero(heroName)
-        if (heroName in self.enemyHeroes) == False:
-            self.addHero(heroName)
-        self.enemyHeroes[heroName].incLoss()
-    def getWinPerc(self,heroName):
-        if self.enemyHeroes == False:
-            self.addHero(heroName)
-        if (heroName in self.enemyHeroes) == False:
-            self.addHero(heroName)
-        self.enemyHeroes[heroName].getWinPerc()
-    def getHeroes(self):
-        return self.enemyHeroes
-    def getHero(self,name):
-        return self.enemyHeroes[name]
 
-#calculates date 1 month ago
-prev_month = date.today() + relativedelta(months=-1)
-correct_day = prev_month.strftime('%Y-%m-%d')
-game_type = "HeroLeague"
+def analyze_replays(beginPage,endPage,game_type="HeroLeague",dicFileName='dic',outFileName='stats.json'):
+    #calculates date 1 month ago
+    prev_month = date.today() + relativedelta(months=-1)
+    correct_day = prev_month.strftime('%Y-%m-%d')
+    #game_type = "HeroLeague"
 
-heroDict = {}
-for i in range(0,1):
-    curr_page = i+1
-    print "On page " + str(curr_page)
-    print "Requesting response"
-    #response = requests.get("http://hotsapi.net/api/v1/replays/paged?page="+str(curr_page)+"&start_date="+correct_day+"&game_type="+game_type)
-    response = requests.get("http://hotsapi.net/api/v1/replays/paged?page="+str(curr_page)+"&game_type="+game_type)
-    print "Finished request"
+    heroDict = {}
+    #beginPage = 205
+    #endPage = 300
+    #dicFileName = 'dic'
 
-    data = json.loads(response.text)
+    for i in range(beginPage,endPage+1):
+        if os.stat(dicFileName).st_size:
+            with open(dicFileName) as d:
+                heroDict = json.load(d)
+                print "loaded dic"
+        curr_page = i
+        print "On page " + str(curr_page)
+        print "Requesting response"
+        #response = requests.get("http://hotsapi.net/api/v1/replays/paged?page="+str(curr_page)+"&start_date="+correct_day+"&game_type="+game_type)
+        response = requests.get("http://hotsapi.net/api/v1/replays/paged?page="+str(curr_page)+"&game_type="+game_type)
+        print "Finished request"
 
+        try:
+            data = json.loads(response.text)
+        except ValueError:
+            # keep track of unprocessed pages
+            print "Could not decode page: " + str(curr_page)
+            pages = []
+            with open("unprocessed_pages.txt","r") as f:
+                pages = f.readlines()
+            with open("unprocessed_pages.txt","w") as f:
+                f.write("".join(pages)+str(curr_page)+"\n")
+            continue
 
-    lenReplays = len(data['replays'])
+        lenReplays = len(data['replays'])
 
-    for x in range(0,10):
-        currID =  data['replays'.decode('utf-8')][x]['id']
+        for x in range(0,lenReplays):
+            currID =  data['replays'.decode('utf-8')][x]['id']
 
-        # want to count hero popularity
-        response = requests.get('http://hotsapi.net/api/v1/replays/'+str(currID))
+            print "\tRequesting replay id:" + str(currID)
+            response = requests.get('http://hotsapi.net/api/v1/replays/'+str(currID))
+            print "\tFinished replay request"
 
-        # loads data of certain replay ( got through ID )
-        replayData = json.loads(response.text)
+            # loads data of certain replay ( got through ID )
+            try:
+                replayData = json.loads(response.text)
+            except ValueError:
+                print 'Could not decode replay'
+                continue
+            arrLen = len(replayData['players'])
 
-        arrLen = len(replayData['players'])
+            numWinners = 0
+            numLosers = 0
+            winners = [''] * 5
+            losers = [''] * 5
 
-        numWinners = 0
-        numLosers = 0
-        winners = [''] * 5
-        losers = [''] * 5
+            # iterate through heroes played in certain match, keeping count
+            for i in range (0,arrLen):
+                heroName = (replayData['players'][i]['hero']).encode("utf-8")
 
-        # iterate through heroes played in certain match, keeping count
-        for i in range (0,arrLen):
-            heroName = (replayData['players'][i]['hero']).encode("utf-8")
+                # sort winners & losers into 2 arrays
+                if replayData['players'][i]['winner'] == True:
+                    winners[numWinners] = (replayData['players'][i]['hero']).encode("utf-8")
+                    numWinners += 1
+                else:
+                    losers[numLosers] = (replayData['players'][i]['hero']).encode("utf-8")
+                    numLosers += 1
 
-            # sort winners & losers into 2 arrays
-            if replayData['players'][i]['winner'] == True:
-                winners[numWinners] = (replayData['players'][i]['hero']).encode("utf-8")
-                numWinners += 1
-            else:
-                losers[numLosers] = (replayData['players'][i]['hero']).encode("utf-8")
-                numLosers += 1
+            # adds wins and losses to heroDict
+            for win in range (0, 5):
+                winner = winners[win]
+                for lose in range (0,5):
+                    loser = losers[lose]
 
-        # adds wins and losses to heroDict
-        for win in range (0, 5):
-            winner = winners[win]
-            for lose in range (0,5):
-                loser = losers[lose]
+                    # structure: heroDict[Hero] = dict( loser, dict(wins,losses) )
 
-                if (winner in heroDict) == False:
-                    heroDict[winner] = WinLoss(winner)
+                    # add winner key & value to heroDict if nonexistent
+                    if (winner in heroDict) == False:
+                        heroDict[winner] = dict( [( loser, dict( [('wins',0),('losses',0)] ))] )
+                    # add loser key & value to heroDict[winner] if nonexistent
+                    if (loser in heroDict[winner]) == False:
+                        heroDict[winner][loser] = dict([('wins',0),('losses',0)])
 
-                heroDict[winner].incWin(loser)
+                    # increment win
+                    heroDict[winner][loser]['wins'] += 1
 
-                if (loser in heroDict) == False:
-                    heroDict[loser] = WinLoss(loser)
+                    if (loser in heroDict) == False:
+                        heroDict[loser] = dict([(winner,dict([('wins',0),('losses',0)]))])
+                    # add winner key & value to heroDict[loser] if nonexistent
+                    if (winner in heroDict[loser]) == False:
+                        heroDict[loser][winner] = dict([('wins',0),('losses',0)])
 
-                heroDict[loser].incLoss(winner)
+                    # increment loss
+                    heroDict[loser][winner]['losses'] += 1
 
-lenDict = len(heroDict)
+       # save dict every page in case of request timeout
+        with open(dicFileName, 'w') as outfile:
+            json.dump(heroDict, outfile)
+            print "saved page: " + str(curr_page)
+            read_from_dic = True
 
-'''
-file = open("stats.txt","w")
+    with open(outFileName, 'w') as outfile:
+        json.dump(heroDict, outfile)
 
-for hero in heroDict:
-    enemyHeroes = heroDict[hero].getHeroes()
-    for enemyHero in enemyHeroes:
-        perclen = len(str(round(enemyHeroes[enemyHero].getWinPerc()*100,3)))
-        file.write(hero + " " * (18-len(hero)) +
-                str(round(enemyHeroes[enemyHero].getWinPerc()*100,3)) +
-                " " * (8-perclen) + enemyHeroes[enemyHero].getName() +
-                " " * (18-len(enemyHeroes[enemyHero].getName())) +
-                " " * 5 + str(int(enemyHeroes[enemyHero].getTotal())) +
-                " " * 5 + str(int(enemyHeroes[enemyHero].getWins())) +
-                " " * 5 + str(int(enemyHeroes[enemyHero].getLosses())) + "\n")
-
-file.close()
-'''
-with open('stats.txt', 'w') as outfile:
-    json.dump(heroDict, outfile)
+analyze_replays(beginPage=211, endPage=298)
