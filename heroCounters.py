@@ -1,3 +1,4 @@
+from time import sleep
 import json
 import os
 import requests
@@ -69,16 +70,21 @@ def analyze_replays(beginPage,endPage,game_type="HeroLeague",dicFileName='dic',o
                 heroDict = json.load(d)
                 print "loaded dictionary"
         curr_page = i
+        print "Sleeping"
+        sleep(60)
         print "On page " + str(curr_page)
         print "Requesting response"
-        response = requests.get("http://hotsapi.net/api/v1/replays/paged?page="+str(curr_page)+"&game_type="+game_type)
+        print "from " + "http://hotsapi.net/api/v1/replays/paged?page="+str(curr_page)+"&start_date="+correct_day+"&game_type="+game_type
+        #response = requests.get("http://hotsapi.net/api/v1/replays/paged?page="+str(curr_page)+"&game_type="+game_type,timeout=60000)
+        response = requests.get("http://hotsapi.net/api/v1/replays/paged?page="+str(curr_page)+"&start_date="+correct_day+"&game_type="+game_type,timeout=60000)
         print "Finished request"
 
         try:
             data = json.loads(response.text)
-        except ValueError:
+        except ValueError as e:
             # keep track of unprocessed pages
             print "Could not decode page: " + str(curr_page)
+            print e.message
             break
             '''
             pages = []
@@ -102,8 +108,9 @@ def analyze_replays(beginPage,endPage,game_type="HeroLeague",dicFileName='dic',o
             # loads data of certain replay ( got through ID )
             try:
                 replayData = json.loads(response.text)
-            except ValueError:
+            except ValueError as e:
                 print 'Could not decode replay'
+                print e.message
                 continue
 
             num_players = len(replayData['players'])
@@ -238,4 +245,5 @@ def analyze_replays(beginPage,endPage,game_type="HeroLeague",dicFileName='dic',o
     with open(outFileName, 'w') as outfile:
         json.dump(heroDict, outfile)
 
-analyze_replays(beginPage=3, endPage=100)
+# originally analyzed pgs 1-321(inclusive), non-date related
+analyze_replays(beginPage=1, endPage=500)
