@@ -1,16 +1,20 @@
-heroDict = {}
+import json
+import requests
+from datetime import date
+from dateutil.relativedelta import relativedelta
+from time import sleep
+from heroCounters import analyze_replays
 
-heroDict['Stitches'] = {}
-heroDict['Stitches']['allies'] = {}
-heroDict['Stitches']['allies']['Chromie'] = {}
-heroDict['Stitches']['allies']['Chromie']['wins'] = 3
-heroDict['Stitches']['allies']['Chromie']['losses'] = 2
 
-heroDict['Stitches']['enemies'] = {}
-heroDict['Stitches']['enemies']['Chromie'] = {}
-heroDict['Stitches']['enemies']['Chromie']['wins'] = 4
-heroDict['Stitches']['enemies']['Chromie']['wins'] = 1
+prev_month = date.today() + relativedelta(months=-1)
+correct_day = prev_month.strftime('%Y-%m-%d')
+print "Calculating starting from day: " + correct_day
+dicName = 'stats_dic'
+outName = 'stats.json'
 
-#heroDict['Stitches'] = dict( [ ('allies', dict( ['Chromie', dict([ ('wins',3),('losses',2) ] ) ] ) ), ('enemies', dict( ['Chromie', dict([ ('wins',5),('losses',1) ]) ]  )) ] )
+open(dicName,'w').close()
+open(outName,'w').close()
 
-print heroDict
+analyze_replays(beginPage=1,endPage=500,dicFileName=dicName,outFileName=outName,correct_day=correct_day)
+
+print "Finished calculating starting from day: " + correct_day

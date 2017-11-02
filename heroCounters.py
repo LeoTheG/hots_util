@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from time import sleep
 import json
 import os
@@ -55,10 +56,12 @@ def init_hero_map_dict(heroDict,hero_name, map_name):
         curr_level = LEVELS[i]
         heroDict[hero_name]['maps'][map_name]['talents'][curr_level] = {}
 
-def analyze_replays(beginPage,endPage,game_type="HeroLeague",dicFileName='dic',outFileName='stats.json'):
+prev_month = date.today() + relativedelta(months=-1)
+correct_day = prev_month.strftime('%Y-%m-%d')
+
+def analyze_replays(beginPage,endPage,game_type="HeroLeague",dicFileName='dic',outFileName='stats.json',correct_day=correct_day,one_day=False):
     #calculates date 1 month ago
-    prev_month = date.today() + relativedelta(months=-1)
-    correct_day = prev_month.strftime('%Y-%m-%d')
+    first_run = True
 
     heroDict = {}
     heroDict['maps'] = {}
@@ -70,13 +73,20 @@ def analyze_replays(beginPage,endPage,game_type="HeroLeague",dicFileName='dic',o
                 heroDict = json.load(d)
                 print "loaded dictionary"
         curr_page = i
-        print "Sleeping"
-        sleep(60)
+        if first_run == False:
+            print "Sleeping"
+            sleep(60)
+        first_run = False
         print "On page " + str(curr_page)
         print "Requesting response"
-        print "from " + "http://hotsapi.net/api/v1/replays/paged?page="+str(curr_page)+"&start_date="+correct_day+"&game_type="+game_type
         #response = requests.get("http://hotsapi.net/api/v1/replays/paged?page="+str(curr_page)+"&game_type="+game_type,timeout=60000)
-        response = requests.get("http://hotsapi.net/api/v1/replays/paged?page="+str(curr_page)+"&start_date="+correct_day+"&game_type="+game_type,timeout=60000)
+        if one_day:
+            new_day = (date.today() + relativedelta(months=-1)).strftime('%Y-%m-%d')
+            print "from " + "http://hotsapi.net/api/v1/replays/paged?page="+str(curr_page)+"&start_date="+correct_day+"&end_date="+new_day+"&game_type="+game_type
+            response = requests.get("http://hotsapi.net/api/v1/replays/paged?page="+str(curr_page)+"&start_date="+correct_day+"&end_date="+new_day+"&game_type="+game_type,timeout=60000)
+        else:
+            print "from " + "http://hotsapi.net/api/v1/replays/paged?page="+str(curr_page)+"&start_date="+correct_day+"&game_type="+game_type
+            response = requests.get("http://hotsapi.net/api/v1/replays/paged?page="+str(curr_page)+"&start_date="+correct_day+"&game_type="+game_type,timeout=60000)
         print "Finished request"
 
         try:
@@ -128,6 +138,8 @@ def analyze_replays(beginPage,endPage,game_type="HeroLeague",dicFileName='dic',o
             # iterate through heroes played in certain match, keeping count
             for i in range (0, num_players):
                 hero_name = (replayData['players'][i]['hero']).encode("utf-8")
+                if hero_name[-3:] == 'cio':
+                    hero_name = 'Lucio'
 
                 # check & add heroes to specific map
                 if ( hero_name in heroDict['maps'][map_name] ) == False:
@@ -147,6 +159,8 @@ def analyze_replays(beginPage,endPage,game_type="HeroLeague",dicFileName='dic',o
                     heroDict['maps'][map_name][hero_name]['wins'] += 1
 
                     winners[numWinners] = (replayData['players'][i]['hero']).encode("utf-8")
+                    if winners[numWinners][-3:] == 'cio':
+                        winners[numWinners] = 'Lucio'
                     numWinners += 1
                     heroDict[hero_name]['total_wins'] += 1
                     heroDict[hero_name]['maps'][map_name]['wins'] += 1
@@ -166,6 +180,8 @@ def analyze_replays(beginPage,endPage,game_type="HeroLeague",dicFileName='dic',o
                     heroDict[hero_name]['maps'][map_name]['losses'] += 1
 
                     losers[numLosers] = (replayData['players'][i]['hero']).encode("utf-8")
+                    if losers[numLosers][-3:] == 'cio':
+                        losers[numLosers] = 'Lucio'
                     numLosers += 1
                     heroDict[hero_name]['total_losses'] += 1
 
@@ -185,10 +201,14 @@ def analyze_replays(beginPage,endPage,game_type="HeroLeague",dicFileName='dic',o
             for lose in range(0, 5):
                 lose_count += 1
                 loser = losers[lose]
+                if loser[-3:] == 'cio':
+                    loser = 'Lucio'
                 ally_count = 0
                 # loop through allies of losers
                 while ally_count < 5:
                     ally_name = losers[ally_count]
+                    if ally_name[-3:] == 'cio':
+                        ally_name = 'Lucio'
                     # do not add self as ally
                     if ally_count != lose_count:
                         # check for ally key
@@ -206,12 +226,16 @@ def analyze_replays(beginPage,endPage,game_type="HeroLeague",dicFileName='dic',o
             for win in range (0, 5):
                 win_count += 1
                 winner = winners[win]
+                if winner[-3:] == 'cio':
+                    winner = 'Lucio'
 
                 # add to allies dict
                 ally_count = 0
                 while (ally_count < 5):
                     # do not add self as ally
                     ally_name = winners[ally_count]
+                    if ally_name[-3:] == 'cio':
+                        ally_name = 'Lucio'
                     if ally_count != win_count:
                         # check for ally key
                         if (ally_name in heroDict[winner]['allies']) == False:
@@ -238,12 +262,14 @@ def analyze_replays(beginPage,endPage,game_type="HeroLeague",dicFileName='dic',o
 
        # save dict every page in case of request timeout
         with open(dicFileName, 'w') as outfile:
+            print "Dumping dic to " + dicFileName
             json.dump(heroDict, outfile)
             print "saved page: " + str(curr_page)
             read_from_dic = True
 
-    with open(outFileName, 'w') as outfile:
-        json.dump(heroDict, outfile)
+        with open(outFileName, 'w') as outfile:
+            json.dump(heroDict, outfile)
 
 # originally analyzed pgs 1-321(inclusive), non-date related
-analyze_replays(beginPage=1, endPage=500)
+# date related analyzed 1-500
+#analyze_replays(beginPage=501, endPage=1000)
