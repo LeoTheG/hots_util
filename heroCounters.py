@@ -59,7 +59,7 @@ def init_hero_map_dict(heroDict,hero_name, map_name):
 prev_month = date.today() + relativedelta(months=-1)
 correct_day = prev_month.strftime('%Y-%m-%d')
 
-def analyze_replays(beginPage,endPage,game_type="HeroLeague",dicFileName='dic',outFileName='stats.json',correct_day=correct_day,one_day=False):
+def analyze_replays(beginPage,endPage,game_type="HeroLeague",dicFileName='dic',outFileName='stats.json',correct_day=correct_day,one_week=False):
     #calculates date 1 month ago
     first_run = True
 
@@ -80,7 +80,7 @@ def analyze_replays(beginPage,endPage,game_type="HeroLeague",dicFileName='dic',o
         print "On page " + str(curr_page)
         print "Requesting response"
         #response = requests.get("http://hotsapi.net/api/v1/replays/paged?page="+str(curr_page)+"&game_type="+game_type,timeout=60000)
-        if one_day:
+        if one_week:
             new_day = (date.today() + relativedelta(months=-1)).strftime('%Y-%m-%d')
             print "from " + "http://hotsapi.net/api/v1/replays/paged?page="+str(curr_page)+"&start_date="+correct_day+"&end_date="+new_day+"&game_type="+game_type
             response = requests.get("http://hotsapi.net/api/v1/replays/paged?page="+str(curr_page)+"&start_date="+correct_day+"&end_date="+new_day+"&game_type="+game_type,timeout=60000)
@@ -269,7 +269,3 @@ def analyze_replays(beginPage,endPage,game_type="HeroLeague",dicFileName='dic',o
 
         with open(outFileName, 'w') as outfile:
             json.dump(heroDict, outfile)
-
-# originally analyzed pgs 1-321(inclusive), non-date related
-# date related analyzed 1-500
-#analyze_replays(beginPage=501, endPage=1000)
