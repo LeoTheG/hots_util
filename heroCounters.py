@@ -7,23 +7,48 @@ from datetime import date
 from dateutil.relativedelta import relativedelta
 
 # DB structure
-# {'maps': { map_name: { hero_name: { 'wins', 'losses'} } }, hero_name: {'total_wins', 'total_losses', 'maps': {map_name: {'wins', 'losses', 'talents': {level: {talent_name: {'wins', 'losses'}}}}}, 'allies': {ally_name: {'wins': num_wins_with, 'losses': num_losses_with}}, 'enemies': {enemy_name: {'wins': num_wins_against, 'losses': num_losses_against}}}}
+# {'talents': {talent_name: {'heroes': {heroName: {'wins','losses'}},'short_name', 'description','url','cooldown','level'}},'maps': { map_name: { hero_name: { 'wins', 'losses'} } }, hero_name: {'total_wins', 'total_losses', 'maps': {map_name: {'wins', 'losses', 'talents': {level: {talent_name: {'wins', 'losses'}}}}}, 'allies': {ally_name: {'wins': num_wins_with, 'losses': num_losses_with}}, 'enemies': {enemy_name: {'wins': num_wins_against, 'losses': num_losses_against}}}}
 
 LEVELS = ['1','4','7','10','13','16','20']
 
 def check_and_init_talent_names(heroDict,hero_name,map_name,talent_dict):
+    heroDict['talents'] = {}
     if talent_dict == None:
         print "No talent dict"
         return
     i = 0
     while i < len(talent_dict):
-    #for i in range (0, num_levels):
         curr_level = LEVELS[i]
         talent_name = talent_dict[curr_level]
-        if (talent_name in heroDict[hero_name]['maps'][map_name]['talents'][curr_level]) == False:
-            heroDict[hero_name]['maps'][map_name]['talents'][curr_level][talent_name] = {}
-            heroDict[hero_name]['maps'][map_name]['talents'][curr_level][talent_name]['wins'] = 0
-            heroDict[hero_name]['maps'][map_name]['talents'][curr_level][talent_name]['losses'] = 0
+
+        # create heroDict['talents'] dicts
+        if (talent_name in heroDict['talents']) == False:
+            response = requests.get("http://hotsapi.net/api/v1/talents/"+talent_name)
+            data = json.loads(response.text)
+            heroDict['talents'][talent_name] = {}
+            heroDict['talents'][talent_name]['heroes'] = {}
+            heroDict['talents'][talent_name]['short_name'] = data['title']
+            heroDict['talents'][talent_name]['description'] = data['description']
+            heroDict['talents'][talent_name]['url'] = data['icon_url']['64x64']
+            heroDict['talents'][talent_name]['cooldown'] = data['cooldown']
+            heroDict['talents'][talent_name]['level'] = data['level']
+            print "Creating heroDict['talents'] short name:"+heroDict['talents'][talent_name]['short_name']
+        for hero in data['heroes']:
+            if hero[-3:] == 'cio':
+                hero = 'Lucio'
+
+            if (hero in heroDict['talents'][talent_name]['heroes']) == False:
+                heroDict['talents'][talent_name]['heroes'][hero] = {}
+                heroDict['talents'][talent_name]['heroes'][hero]['wins'] = 0
+                heroDict['talents'][talent_name]['heroes'][hero]['losses'] = 0
+
+
+        short_talent_name = heroDict['talents'][talent_name]['short_name']
+        # create heroDict[hero_name]['maps'][map_name]['talents']
+        if (short_talent_name in heroDict[hero_name]['maps'][map_name]['talents'][curr_level]) == False:
+            heroDict[hero_name]['maps'][map_name]['talents'][curr_level][short_talent_name] = {}
+            heroDict[hero_name]['maps'][map_name]['talents'][curr_level][short_talent_name]['wins'] = 0
+            heroDict[hero_name]['maps'][map_name]['talents'][curr_level][short_talent_name]['losses'] = 0
         i += 1
 
 def init_map_dict(heroDict,map_name,hero_name):
@@ -59,7 +84,7 @@ def init_hero_map_dict(heroDict,hero_name, map_name):
 prev_month = date.today() + relativedelta(months=-1)
 correct_day = prev_month.strftime('%Y-%m-%d')
 
-def analyze_replays(beginPage,endPage,game_type="HeroLeague",dicFileName='dic',outFileName='stats.json',correct_day=correct_day,one_week=False):
+def analyze_replays(beginPage,endPage,game_type="HeroLeague",dicFileName='dic',outFileName='stats.json',correct_day=correct_day,one_week=False,one_month=True):
     #calculates date 1 month ago
     first_run = True
 
@@ -78,15 +103,24 @@ def analyze_replays(beginPage,endPage,game_type="HeroLeague",dicFileName='dic',o
             sleep(60)
         first_run = False
         print "On page " + str(curr_page)
-        print "Requesting response"
+        end_date = (date.today() + relativedelta(weeks=-1)).strftime('%Y-%m-%d')
+        print "Requesting response from http://hotsapi.net/api/v1/replays/paged?page="+str(curr_page)+"&start_date="+correct_day+"&end_date="+end_date+"&game_type="+game_type
         #response = requests.get("http://hotsapi.net/api/v1/replays/paged?page="+str(curr_page)+"&game_type="+game_type,timeout=60000)
+        #TODO: Make one_week/one_month better coded
+        response = requests.get("http://hotsapi.net/api/v1/replays/paged?page="+str(curr_page)+"&start_date="+correct_day+"&end_date="+end_date+"&game_type="+game_type,timeout=60000)
+        '''
         if one_week:
-            new_day = (date.today() + relativedelta(months=-1)).strftime('%Y-%m-%d')
+            new_day = (date.today() + relativedelta(weeks=-1)).strftime('%Y-%m-%d')
             print "from " + "http://hotsapi.net/api/v1/replays/paged?page="+str(curr_page)+"&start_date="+correct_day+"&end_date="+new_day+"&game_type="+game_type
             response = requests.get("http://hotsapi.net/api/v1/replays/paged?page="+str(curr_page)+"&start_date="+correct_day+"&end_date="+new_day+"&game_type="+game_type,timeout=60000)
+        elif one_month:
+            new_day = (date.today() + relativedelta(weeks=-1)).strftime('%Y-%m-%d')
+            response = requests.get("http://hotsapi.net/api/v1/replays/paged?page="+str(curr_page)+"&start_date="+correct_day+"&end_date="+new_day+"&game_type="+game_type,timeout=60000)
+
         else:
             print "from " + "http://hotsapi.net/api/v1/replays/paged?page="+str(curr_page)+"&start_date="+correct_day+"&game_type="+game_type
             response = requests.get("http://hotsapi.net/api/v1/replays/paged?page="+str(curr_page)+"&start_date="+correct_day+"&game_type="+game_type,timeout=60000)
+            '''
         print "Finished request"
 
         try:
@@ -166,14 +200,19 @@ def analyze_replays(beginPage,endPage,game_type="HeroLeague",dicFileName='dic',o
                     heroDict[hero_name]['maps'][map_name]['wins'] += 1
 
                     # increment wins for talents on map
-                    #num_levels = len(LEVELS)
-                    #for lev in range (0, num_levels):
                     if replayData['players'][i]['talents'] == None:
                         continue
                     for lev in range (0, len(replayData['players'][i]['talents'])):
                         curr_level = LEVELS[lev]
                         talent_name = replayData['players'][i]['talents'][curr_level]
-                        heroDict[hero_name]['maps'][map_name]['talents'][curr_level][talent_name]['wins'] += 1
+                        short_talent_name = heroDict['talents'][talent_name]['short_name']
+                        heroDict[hero_name]['maps'][map_name]['talents'][curr_level][short_talent_name]['wins'] += 1
+                        if (hero_name in heroDict['talents'][talent_name]) == False:
+                            print "Creating talent: " + talent_name
+                            heroDict['talents'][talent_name][hero_name] = {}
+                            heroDict['talents'][talent_name][hero_name]['wins'] = 0
+                            heroDict['talents'][talent_name][hero_name]['losses'] = 0
+                        heroDict['talents'][talent_name][hero_name]['wins'] += 1
 
                 else:
                     heroDict['maps'][map_name][hero_name]['losses'] += 1
@@ -194,7 +233,14 @@ def analyze_replays(beginPage,endPage,game_type="HeroLeague",dicFileName='dic',o
                     for lev in range (0, len(replayData['players'][i]['talents'])):
                         curr_level = LEVELS[lev]
                         talent_name = replayData['players'][i]['talents'][curr_level]
-                        heroDict[hero_name]['maps'][map_name]['talents'][curr_level][talent_name]['losses'] += 1
+                        short_talent_name = heroDict['talents'][talent_name]['short_name']
+                        heroDict[hero_name]['maps'][map_name]['talents'][curr_level][short_talent_name]['losses'] += 1
+                        if (hero_name in heroDict['talents'][talent_name]) == False:
+                            print "Creating talent: " + talent_name
+                            heroDict['talents'][talent_name][hero_name] = {}
+                            heroDict['talents'][talent_name][hero_name]['wins'] = 0
+                            heroDict['talents'][talent_name][hero_name]['losses'] = 0
+                        heroDict['talents'][talent_name][hero_name]['losses'] += 1
 
             # add to allies dict of losers
             lose_count = -1
