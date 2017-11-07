@@ -11,11 +11,11 @@ correct_day = prev_month.strftime('%Y-%m-%d')
 print "Calculating starting from day: " + correct_day
 dicName = 'test_stats_dic'
 outName = 'test_stats.json'
-beginPage = 1
-endPage = 5
+beginPage = 234
+endPage = 600
 
-open(dicName,'w').close()
-open(outName,'w').close()
+#open(dicName,'w').close()
+#open(outName,'w').close()
 
 analyze_replays(beginPage=beginPage,endPage=endPage,dicFileName=dicName,outFileName=outName,correct_day=correct_day)
 

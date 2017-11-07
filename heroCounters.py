@@ -12,7 +12,6 @@ from dateutil.relativedelta import relativedelta
 LEVELS = ['1','4','7','10','13','16','20']
 
 def check_and_init_talent_names(heroDict,hero_name,map_name,talent_dict):
-    heroDict['talents'] = {}
     if talent_dict == None:
         print "No talent dict"
         return
@@ -20,6 +19,7 @@ def check_and_init_talent_names(heroDict,hero_name,map_name,talent_dict):
     while i < len(talent_dict):
         curr_level = LEVELS[i]
         talent_name = talent_dict[curr_level]
+
 
         # create heroDict['talents'] dicts
         if (talent_name in heroDict['talents']) == False:
@@ -29,18 +29,19 @@ def check_and_init_talent_names(heroDict,hero_name,map_name,talent_dict):
             heroDict['talents'][talent_name]['heroes'] = {}
             heroDict['talents'][talent_name]['short_name'] = data['title']
             heroDict['talents'][talent_name]['description'] = data['description']
-            heroDict['talents'][talent_name]['url'] = data['icon_url']['64x64']
+            try:
+                heroDict['talents'][talent_name]['url'] = data['icon_url']['64x64']
+            except TypeError as e:
+                print "Data dict type is " + str(data.__class__)
+                print(data)
+
             heroDict['talents'][talent_name]['cooldown'] = data['cooldown']
             heroDict['talents'][talent_name]['level'] = data['level']
-            print "Creating heroDict['talents'] short name:"+heroDict['talents'][talent_name]['short_name']
-        for hero in data['heroes']:
-            if hero[-3:] == 'cio':
-                hero = 'Lucio'
 
-            if (hero in heroDict['talents'][talent_name]['heroes']) == False:
-                heroDict['talents'][talent_name]['heroes'][hero] = {}
-                heroDict['talents'][talent_name]['heroes'][hero]['wins'] = 0
-                heroDict['talents'][talent_name]['heroes'][hero]['losses'] = 0
+        if (hero_name in heroDict['talents'][talent_name]['heroes']) == False:
+            heroDict['talents'][talent_name]['heroes'][hero_name] = {}
+            heroDict['talents'][talent_name]['heroes'][hero_name]['wins'] = 0
+            heroDict['talents'][talent_name]['heroes'][hero_name]['losses'] = 0
 
 
         short_talent_name = heroDict['talents'][talent_name]['short_name']
@@ -90,6 +91,7 @@ def analyze_replays(beginPage,endPage,game_type="HeroLeague",dicFileName='dic',o
 
     heroDict = {}
     heroDict['maps'] = {}
+    heroDict['talents'] = {}
 
     for i in range(beginPage,endPage+1):
         # check if dictionary exists
@@ -186,7 +188,7 @@ def analyze_replays(beginPage,endPage,game_type="HeroLeague",dicFileName='dic',o
                     init_hero_map_dict(heroDict,hero_name, map_name)
 
                 # check & add talent names
-                check_and_init_talent_names(heroDict,hero_name,map_name,replayData['players'][i]['talents'])
+                check_and_init_talent_names(heroDict=heroDict,hero_name=hero_name,map_name=map_name,talent_dict=replayData['players'][i]['talents'])
 
                 # sort winners & losers into 2 arrays
                 if replayData['players'][i]['winner'] == True:
@@ -207,12 +209,11 @@ def analyze_replays(beginPage,endPage,game_type="HeroLeague",dicFileName='dic',o
                         talent_name = replayData['players'][i]['talents'][curr_level]
                         short_talent_name = heroDict['talents'][talent_name]['short_name']
                         heroDict[hero_name]['maps'][map_name]['talents'][curr_level][short_talent_name]['wins'] += 1
-                        if (hero_name in heroDict['talents'][talent_name]) == False:
-                            print "Creating talent: " + talent_name
-                            heroDict['talents'][talent_name][hero_name] = {}
-                            heroDict['talents'][talent_name][hero_name]['wins'] = 0
-                            heroDict['talents'][talent_name][hero_name]['losses'] = 0
-                        heroDict['talents'][talent_name][hero_name]['wins'] += 1
+                        if (hero_name in heroDict['talents'][talent_name]['heroes']) == False:
+                            heroDict['talents'][talent_name]['heroes'][hero_name] = {}
+                            heroDict['talents'][talent_name]['heroes'][hero_name]['wins'] = 0
+                            heroDict['talents'][talent_name]['heroes'][hero_name]['losses'] = 0
+                        heroDict['talents'][talent_name]['heroes'][hero_name]['wins'] += 1
 
                 else:
                     heroDict['maps'][map_name][hero_name]['losses'] += 1
@@ -235,12 +236,11 @@ def analyze_replays(beginPage,endPage,game_type="HeroLeague",dicFileName='dic',o
                         talent_name = replayData['players'][i]['talents'][curr_level]
                         short_talent_name = heroDict['talents'][talent_name]['short_name']
                         heroDict[hero_name]['maps'][map_name]['talents'][curr_level][short_talent_name]['losses'] += 1
-                        if (hero_name in heroDict['talents'][talent_name]) == False:
-                            print "Creating talent: " + talent_name
-                            heroDict['talents'][talent_name][hero_name] = {}
-                            heroDict['talents'][talent_name][hero_name]['wins'] = 0
-                            heroDict['talents'][talent_name][hero_name]['losses'] = 0
-                        heroDict['talents'][talent_name][hero_name]['losses'] += 1
+                        if (hero_name in heroDict['talents'][talent_name]['heroes']) == False:
+                            heroDict['talents'][talent_name]['heroes'][hero_name] = {}
+                            heroDict['talents'][talent_name]['heroes'][hero_name]['wins'] = 0
+                            heroDict['talents'][talent_name]['heroes'][hero_name]['losses'] = 0
+                        heroDict['talents'][talent_name]['heroes'][hero_name]['losses'] += 1
 
             # add to allies dict of losers
             lose_count = -1
