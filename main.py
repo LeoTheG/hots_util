@@ -6,15 +6,14 @@ from time import sleep
 from heroCounters import analyze_replays
 
 
-prev_month = date.today() + relativedelta(months=-1)
-correct_day = prev_month.strftime('%Y-%m-%d')
-print "Analyzing 1 Month of Replays starting from: " + correct_day
+start_date=(date.today()+relativedelta(months=-1,weeks=-1)).strftime('%Y-%m-%d')
+print "Analyzing 1 Month of Replays starting from: " + start_date
 dicName = 'stats_dic'
 outName = 'stats.json'
 
 open(dicName,'w').close()
 open(outName,'w').close()
 
-analyze_replays(beginPage=1,endPage=500,dicFileName=dicName,outFileName=outName,correct_day=correct_day)
+analyze_replays(beginPage=1,endPage=800,dicFileName=dicName,outFileName=outName,start_date=start_date)
 
-print "Finished calculating starting from day: " + correct_day
+print "Finished calculating starting from day: " + start_date

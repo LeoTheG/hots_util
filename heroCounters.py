@@ -82,14 +82,17 @@ def init_hero_map_dict(heroDict,hero_name, map_name):
         curr_level = LEVELS[i]
         heroDict[hero_name]['maps'][map_name]['talents'][curr_level] = {}
 
-prev_month = date.today() + relativedelta(months=-1)
-correct_day = prev_month.strftime('%Y-%m-%d')
+prev_month = date.today() + relativedelta(months=-1,weeks=-1)
+start_date = prev_month.strftime('%Y-%m-%d')
+end_date = (date.today() + relativedelta(weeks=-1)).strftime('%Y-%m-%d')
 
-def analyze_replays(beginPage,endPage,game_type="HeroLeague",dicFileName='dic',outFileName='stats.json',correct_day=correct_day,one_week=False,one_month=True):
-    #calculates date 1 month ago
+def analyze_replays(beginPage,endPage,game_type="HeroLeague",dicFileName='dic',outFileName='stats.json',start_date=start_date,end_date=end_date):
     first_run = True
 
     heroDict = {}
+    heroDict['info']={}
+    heroDict['info']['analysis_length']='1 month'
+    heroDict['info']['analysis_start_date']=start_date
     heroDict['maps'] = {}
     heroDict['talents'] = {}
 
@@ -104,25 +107,11 @@ def analyze_replays(beginPage,endPage,game_type="HeroLeague",dicFileName='dic',o
             print "Sleeping"
             sleep(60)
         first_run = False
-        print "On page " + str(curr_page)
-        end_date = (date.today() + relativedelta(weeks=-1)).strftime('%Y-%m-%d')
-        print "Requesting response from http://hotsapi.net/api/v1/replays/paged?page="+str(curr_page)+"&start_date="+correct_day+"&end_date="+end_date+"&game_type="+game_type
-        #response = requests.get("http://hotsapi.net/api/v1/replays/paged?page="+str(curr_page)+"&game_type="+game_type,timeout=60000)
-        #TODO: Make one_week/one_month better coded
-        response = requests.get("http://hotsapi.net/api/v1/replays/paged?page="+str(curr_page)+"&start_date="+correct_day+"&end_date="+end_date+"&game_type="+game_type,timeout=60000)
-        '''
-        if one_week:
-            new_day = (date.today() + relativedelta(weeks=-1)).strftime('%Y-%m-%d')
-            print "from " + "http://hotsapi.net/api/v1/replays/paged?page="+str(curr_page)+"&start_date="+correct_day+"&end_date="+new_day+"&game_type="+game_type
-            response = requests.get("http://hotsapi.net/api/v1/replays/paged?page="+str(curr_page)+"&start_date="+correct_day+"&end_date="+new_day+"&game_type="+game_type,timeout=60000)
-        elif one_month:
-            new_day = (date.today() + relativedelta(weeks=-1)).strftime('%Y-%m-%d')
-            response = requests.get("http://hotsapi.net/api/v1/replays/paged?page="+str(curr_page)+"&start_date="+correct_day+"&end_date="+new_day+"&game_type="+game_type,timeout=60000)
 
-        else:
-            print "from " + "http://hotsapi.net/api/v1/replays/paged?page="+str(curr_page)+"&start_date="+correct_day+"&game_type="+game_type
-            response = requests.get("http://hotsapi.net/api/v1/replays/paged?page="+str(curr_page)+"&start_date="+correct_day+"&game_type="+game_type,timeout=60000)
-            '''
+        print "On page " + str(curr_page)
+        print "Requesting response from http://hotsapi.net/api/v1/replays/paged?page="+str(curr_page)+"&start_date="+start_date+"&end_date="+end_date+"&game_type="+game_type
+
+        response = requests.get("http://hotsapi.net/api/v1/replays/paged?page="+str(curr_page)+"&start_date="+start_date+"&end_date="+end_date+"&game_type="+game_type,timeout=60000)
         print "Finished request"
 
         try:
@@ -132,14 +121,6 @@ def analyze_replays(beginPage,endPage,game_type="HeroLeague",dicFileName='dic',o
             print "Could not decode page: " + str(curr_page)
             print e.message
             break
-            '''
-            pages = []
-            with open("unprocessed_pages.txt","r") as f:
-                pages = f.readlines()
-            with open("unprocessed_pages.txt","w") as f:
-                f.write("".join(pages)+str(curr_page)+"\n")
-            continue
-            '''
 
         lenReplays = len(data['replays'])
 
